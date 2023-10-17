@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+import cmd
+import readline
+import subprocess
+import sys
+
+filename = None
+
+
+def exiting():
+  print("Bye")
+  return True
+
+
+def get_jq_version():
+  rv = subprocess.run("jq --version", capture_output=True, shell=True)
+  if rv.returncode != 0:
+    raise Exception("jq is not found in PATH!")
+  return f" ({rv.stdout.decode().strip()})"
+
+
+class JsonCmd(cmd.Cmd):
+  intro = "Interactive JSON browser" + get_jq_version()
+  prompt = '(ijq) '
+  opts = {"color": "-C", "raw": ""}
+
+  def do_load(self, arg):
+    global filename
+    filename = arg
+
+  def do_EOF(self, arg):
+    return exiting()
+
+  def do_exit(self, arg):
+    return exiting()
+
+  def do_quit(self, arg):
+    return exiting()
+
+  def do_q(self, arg):
+    return exiting()
+
+  def do_help(self, arg):
+    subprocess.run("man jq", shell=True)
+
+  def do_color(self, arg):
+    print("Enabling colors")
+    self.opts["color"] = "-C"
+
+  def do_nocolor(self, arg):
+    print("Disabling colors")
+    self.opts["color"] = "-M"
+
+  def do_raw(self, arg):
+    print("Enabling raw output")
+    self.opts["raw"] = "-r"
+
+  def do_noraw(self, arg):
+    print("Disabling raw output")
+    self.opts["raw"] = ""
+
+  def default(self, arg):
+    if filename:
+      optstr = ' '.join([self.opts[k] for k in self.opts])
+      rv = subprocess.run("jq " + optstr + " '" + arg + "' " + filename, capture_output=True, shell=True)
+      print(rv.stderr.decode())
+      print(rv.stdout.decode())
+    else:
+      print("No file loaded, load it with 'load'.")
+
+
+if __name__ == '__main__':
+  if len(sys.argv) > 1:
+    filename = sys.argv[1]
+  JsonCmd().cmdloop()
